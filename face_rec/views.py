@@ -95,7 +95,7 @@ def TrackImages(request):
     recognizer = cv2.face.LBPHFaceRecognizer_create()#cv2.createLBPHFaceRecognizer()
     recognizer.read(BASE_DIR+'/algorithms/TrainingImageLabel/Trainner.yml')
     harcascadePath = "algorithms/haarcascade_frontalface_default.xml"
-    faceCascade = cv2.CascadeClassifier(harcascadePath);    
+    faceCascade = cv2.CascadeClassifier(harcascadePath)
     df=pd.read_csv(BASE_DIR+"/StudentDetails/StudentDetails.csv")
     cam = cv2.VideoCapture(0)
     font = cv2.FONT_HERSHEY_SIMPLEX        
@@ -116,29 +116,33 @@ def TrackImages(request):
             cv2.rectangle(im,(x,y),(x+w,y+h),(225,0,0),2)
             Id, conf = recognizer.predict(gray[y:y+h,x:x+w])                                   
             if(conf < 100):
-                ts = time.time()      
+                ts = time.time()
                 date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
                 timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
                 aa=df.loc[df['Id'] == Id]['Name'].values
                 name=(" ".join(aa))
                 tt=str(Id)+"-"+aa
                 attendance.loc[len(attendance)] = [Id,name,date,timeStamp]
-                student=student_profile.objects.get(student_id=Id)
-                data=student_attendance.objects.create(roll=student,name=name,date=date,time=timeStamp)
-                data.save()
-                user=student_profile.objects.filter(student_id=Id).update(attendance='Present')
+                try:
+                    student = student_profile.objects.get(student_id=Id)
+                    data = student_attendance.objects.create(roll=student, name=name, date=date, time=timeStamp)
+                    data.save()
+                    user = student_profile.objects.filter(student_id=Id).update(attendance='Present')
+                except:
+                    print('No record found')
+                    return redirect('/home/')
                 if user:
                     messages.success(request, 'Attendance Saved For ' + str(Id))
                     cam.release()
                     cv2.destroyAllWindows()
                 return redirect('/profile/'+ str(Id))
             else:
-                Id='Unknown'                
-                tt=str(Id)  
+                Id='Unknown'
+                tt=str(Id)
             if(conf > 75):
                 noOfFile=len(BASE_DIR+("ImagesUnknown"))+1
-                cv2.imwrite("ImagesUnknown/Image"+str(noOfFile) + ".jpg", im[y:y+h,x:x+w])            
-            cv2.putText(im,str(tt),(x,y+h), font, 1,(255,255,255),2)        
+                cv2.imwrite("ImagesUnknown/Image"+str(noOfFile) + ".jpg", im[y:y+h,x:x+w])
+            cv2.putText(im,str(conf),(x,y+h), font, 1,(0, 0, 0),2)
         attendance=attendance.drop_duplicates(subset=['Id'],keep='first')    
         cv2.imshow('im',im) 
         if (cv2.waitKey(1)==ord('q')):
@@ -219,10 +223,10 @@ def logoutUser(request):
 @login_required(login_url='login')
 @allowed_users(allowed_roles=['teacher','admin','student'])
 def profile(request,pk):
-    id = int(pk)
+    id = str(pk)
     request.FILES
     if request.method=='POST':
-        id = int(pk)
+        id = str(pk)
         name = request.POST.get('username','')
         address=request.POST.get('address', '')
         mob= request.POST.get('mobileno', '')
